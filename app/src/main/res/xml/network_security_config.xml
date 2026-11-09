@@ -1,6 +1,0 @@
-<network-security-config>
-    <base-config cleartextTrafficPermitted="false"/>
-    <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">dev.example.test</domain>
-    </domain-config>
-</network-security-config>

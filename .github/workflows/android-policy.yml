@@ -1,9 +1,9 @@
-name: MSE Android policy pipeline
+name: MSE Android target SDK pipeline
 on:
   push:
-    branches: [mse-android-policy-test]
+    branches: [mse-android-target-sdk-test]
 concurrency:
-  group: mse-android-policy-test
+  group: mse-android-target-sdk-test
   cancel-in-progress: false
 jobs:
   scan:
@@ -20,11 +20,11 @@ jobs:
       - name: Check analyzer configuration
         env:
           MSE_SOURCE_REPO: ${{ vars.MSE_SOURCE_REPO }}
-          MSE_ANDROID_SOURCE_SHA: ${{ vars.MSE_ANDROID_SOURCE_SHA }}
+          MSE_TARGET_SDK_SOURCE_SHA: ${{ vars.MSE_TARGET_SDK_SOURCE_SHA }}
           MSE_SOURCE_DEPLOY_KEY: ${{ secrets.MSE_SOURCE_DEPLOY_KEY }}
         shell: bash
         run: |
-          [[ -n "$MSE_SOURCE_REPO" && "$MSE_ANDROID_SOURCE_SHA" =~ ^[a-fA-F0-9]{40}$ && -n "$MSE_SOURCE_DEPLOY_KEY" ]] || {
+          [[ -n "$MSE_SOURCE_REPO" && "$MSE_TARGET_SDK_SOURCE_SHA" =~ ^[a-fA-F0-9]{40}$ && -n "$MSE_SOURCE_DEPLOY_KEY" ]] || {
             echo "Configure the private MSE repository, its commit SHA and read-only deploy key."
             exit 1
           }
@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: ${{ vars.MSE_SOURCE_REPO }}
-          ref: ${{ vars.MSE_ANDROID_SOURCE_SHA }}
+          ref: ${{ vars.MSE_TARGET_SDK_SOURCE_SHA }}
           ssh-key: ${{ secrets.MSE_SOURCE_DEPLOY_KEY }}
           path: mse
           persist-credentials: false
@@ -87,4 +87,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          "$RUNNER_TEMP/mse" upload-sarif --file "$RUNNER_TEMP/mse-results.sarif" --category mse-android-policy
+          "$RUNNER_TEMP/mse" upload-sarif --file "$RUNNER_TEMP/mse-results.sarif" --category mse-android-target-sdk
