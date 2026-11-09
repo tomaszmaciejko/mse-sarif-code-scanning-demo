@@ -1,0 +1,98 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json",
+  "runs": [
+    {
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "properties": {
+        "mseScanStatus": "complete"
+      },
+      "results": [
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "App.swift"
+                },
+                "region": {
+                  "endLine": 2,
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Potential use of MD5"
+          },
+          "partialFingerprints": {
+            "finding-evidence-v1": "sha256:be92775fcf53d8fae101c9600a18cdf0d7bb8566aa6f78fec5abfa535be89f6d"
+          },
+          "properties": {
+            "confidence": "medium",
+            "mseStatus": "new",
+            "platform": "ios",
+            "severity": "medium"
+          },
+          "ruleId": "MOBILE-CRYPTO-001",
+          "ruleIndex": 0
+        },
+        {
+          "level": "warning",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "App.swift"
+                },
+                "region": {
+                  "endLine": 3,
+                  "startLine": 3
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Potential sensitive data in UserDefaults"
+          },
+          "partialFingerprints": {
+            "finding-evidence-v1": "sha256:ad968e3271824fa5cdeccacf8701a220f334beaaaab4532fade49f10303fd24c"
+          },
+          "properties": {
+            "confidence": "low",
+            "mseStatus": "new",
+            "platform": "ios",
+            "severity": "medium"
+          },
+          "ruleId": "MOBILE-STORAGE-001",
+          "ruleIndex": 1
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "Mobile Security Engine",
+          "rules": [
+            {
+              "id": "MOBILE-CRYPTO-001",
+              "shortDescription": {
+                "text": "Potential use of MD5"
+              }
+            },
+            {
+              "id": "MOBILE-STORAGE-001",
+              "shortDescription": {
+                "text": "Potential sensitive data in UserDefaults"
+              }
+            }
+          ],
+          "version": "0.11.0-dev"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}
