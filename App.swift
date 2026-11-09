@@ -1,3 +1,6 @@
+// Controlled line shift.
+// The code below is identical.
+
 import Foundation
 
 // The same MD5 call moved down: it must remain an existing finding.

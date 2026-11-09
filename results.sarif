@@ -23,14 +23,14 @@
                   "uri": "App.swift"
                 },
                 "region": {
-                  "endLine": 5,
-                  "startLine": 5
+                  "endLine": 8,
+                  "startLine": 8
                 }
               }
             }
           ],
           "message": {
-            "text": "Potential use of MD5. MSE suppression active through 2026-12-09 (UTC): Przykład testowy: czasowa akceptacja MD5 do zaplanowanej migracji. Problem nadal występuje."
+            "text": "Potential use of MD5. MSE suppression active through 2026-12-09 (UTC): Przyk\u0142ad testowy: czasowa akceptacja MD5 do zaplanowanej migracji. Problem nadal wyst\u0119puje."
           },
           "properties": {
             "confidence": "medium",
@@ -44,7 +44,7 @@
           "ruleIndex": 0,
           "suppressions": [
             {
-              "justification": "Przykład testowy: czasowa akceptacja MD5 do zaplanowanej migracji. Problem nadal występuje.",
+              "justification": "Przyk\u0142ad testowy: czasowa akceptacja MD5 do zaplanowanej migracji. Problem nadal wyst\u0119puje.",
               "kind": "external",
               "status": "accepted"
             }
@@ -60,8 +60,8 @@
                   "uri": "App.swift"
                 },
                 "region": {
-                  "endLine": 7,
-                  "startLine": 7
+                  "endLine": 10,
+                  "startLine": 10
                 }
               }
             }
