@@ -1,5 +1,5 @@
 android {
     defaultConfig {
-        targetSdk = 27
+        targetSdk = 28
     }
 }
