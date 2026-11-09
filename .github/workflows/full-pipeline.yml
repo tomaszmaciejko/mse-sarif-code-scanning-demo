@@ -1,0 +1,75 @@
+name: MSE full pipeline
+on:
+  push:
+    branches: [mse-full-pipeline-test]
+concurrency:
+  group: mse-full-pipeline-test
+  cancel-in-progress: false
+jobs:
+  scan:
+    runs-on: macos-26
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          path: demo
+          persist-credentials: false
+      - name: Check analyzer configuration
+        env:
+          MSE_SOURCE_REPO: ${{ vars.MSE_SOURCE_REPO }}
+          MSE_SOURCE_SHA: ${{ vars.MSE_SOURCE_SHA }}
+          MSE_SOURCE_DEPLOY_KEY: ${{ secrets.MSE_SOURCE_DEPLOY_KEY }}
+        shell: bash
+        run: |
+          [[ -n "$MSE_SOURCE_REPO" && "$MSE_SOURCE_SHA" =~ ^[a-fA-F0-9]{40}$ && -n "$MSE_SOURCE_DEPLOY_KEY" ]] || {
+            echo "Configure the private MSE repository, its commit SHA and read-only deploy key."
+            exit 1
+          }
+      - name: Check out private analyzer
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ vars.MSE_SOURCE_REPO }}
+          ref: ${{ vars.MSE_SOURCE_SHA }}
+          ssh-key: ${{ secrets.MSE_SOURCE_DEPLOY_KEY }}
+          path: mse
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: mse/go.mod
+          cache: false
+      - name: Build MSE
+        working-directory: mse
+        run: go build -o "$RUNNER_TEMP/mse" ./cmd/mse
+      - name: Scan and export
+        shell: bash
+        env:
+          PREVIOUS_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          cli="$RUNNER_TEMP/mse"
+          target="$(mktemp -d "$RUNNER_TEMP/mse-fixture.XXXXXX")"
+          args=(--swift-analyzer swift-syntax)
+          if [[ -n "$PREVIOUS_SHA" && "$PREVIOUS_SHA" != 0000000000000000000000000000000000000000 ]]; then
+            git -C demo show "${PREVIOUS_SHA}:App.swift" > "$target/App.swift"
+            "$cli" scan --swift-analyzer swift-syntax "$target" > "$RUNNER_TEMP/mse-before.json"
+            args+=(--baseline "$RUNNER_TEMP/mse-before.json")
+          fi
+          cp demo/App.swift "$target/App.swift"
+          if [[ -f demo/suppressions.json ]]; then
+            args+=(--suppressions "$GITHUB_WORKSPACE/demo/suppressions.json")
+          fi
+          "$cli" scan "${args[@]}" "$target" > "$RUNNER_TEMP/mse-current.json"
+          "$cli" report "$RUNNER_TEMP/mse-current.json" --format sarif-github-rest --out "$RUNNER_TEMP/mse-results.sarif"
+      - name: Record baseline and suppression status
+        shell: bash
+        run: |
+          jq -c '{scan: .scan.status, baseline: (.baseline | if . then {comparable,new,existing,fixed: [.fixed[].rule.id]} else null end), findings: [.findings[] | {rule: .rule.id,status,suppression: .suppression.state}]}' "$RUNNER_TEMP/mse-current.json"
+          jq -c '[.runs[].results[] | {ruleId,baselineState,fingerprint: .partialFingerprints.primaryLocationLineHash}]' "$RUNNER_TEMP/mse-results.sarif"
+      - name: Upload by REST
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          "$RUNNER_TEMP/mse" upload-sarif --file "$RUNNER_TEMP/mse-results.sarif" --category mse-full-pipeline
