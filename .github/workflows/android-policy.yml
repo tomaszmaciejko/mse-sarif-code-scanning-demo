@@ -74,7 +74,7 @@ jobs:
           cp "$RUNNER_TEMP/mse-current.json" "$RUNNER_TEMP/mse-report/report.json"
           "$cli" report "$RUNNER_TEMP/mse-current.json" --out "$RUNNER_TEMP/mse-report/report.html"
       - name: Publish synthetic report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: mse-android-report
           path: ${{ runner.temp }}/mse-report
