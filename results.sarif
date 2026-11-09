@@ -8,13 +8,10 @@
         }
       ],
       "properties": {
-        "mseBaselineComparable": true,
-        "mseScanStatus": "complete",
-        "mseUnverifiedCount": 0
+        "mseScanStatus": "complete"
       },
       "results": [
         {
-          "baselineState": "unchanged",
           "level": "warning",
           "locations": [
             {
@@ -23,35 +20,28 @@
                   "uri": "App.swift"
                 },
                 "region": {
-                  "endLine": 8,
-                  "startLine": 8
+                  "endLine": 2,
+                  "startLine": 2
                 }
               }
             }
           ],
           "message": {
-            "text": "Potential use of MD5. MSE suppression active through 2026-12-09 (UTC): Przyk\u0142ad testowy: czasowa akceptacja MD5 do zaplanowanej migracji. Problem nadal wyst\u0119puje."
+            "text": "Potential use of MD5"
+          },
+          "partialFingerprints": {
+            "primaryLocationLineHash": "be92775fcf53d8fa:1"
           },
           "properties": {
             "confidence": "medium",
-            "mseStatus": "existing",
-            "mseSuppressionExpiresOn": "2026-12-09",
-            "mseSuppressionState": "active",
+            "mseStatus": "new",
             "platform": "ios",
             "severity": "medium"
           },
           "ruleId": "MOBILE-CRYPTO-001",
-          "ruleIndex": 0,
-          "suppressions": [
-            {
-              "justification": "Przyk\u0142ad testowy: czasowa akceptacja MD5 do zaplanowanej migracji. Problem nadal wyst\u0119puje.",
-              "kind": "external",
-              "status": "accepted"
-            }
-          ]
+          "ruleIndex": 0
         },
         {
-          "baselineState": "new",
           "level": "warning",
           "locations": [
             {
@@ -60,26 +50,26 @@
                   "uri": "App.swift"
                 },
                 "region": {
-                  "endLine": 10,
-                  "startLine": 10
+                  "endLine": 3,
+                  "startLine": 3
                 }
               }
             }
           ],
           "message": {
-            "text": "Hardcoded HTTP URL"
+            "text": "Potential sensitive data in UserDefaults"
+          },
+          "partialFingerprints": {
+            "primaryLocationLineHash": "ad968e3271824fa5:1"
           },
           "properties": {
             "confidence": "low",
             "mseStatus": "new",
-            "mseSuppressionExpiresOn": "2026-11-08",
-            "mseSuppressionState": "expired",
             "platform": "ios",
             "severity": "medium"
           },
-          "ruleId": "MOBILE-NETWORK-002",
-          "ruleIndex": 1,
-          "suppressions": []
+          "ruleId": "MOBILE-STORAGE-001",
+          "ruleIndex": 1
         }
       ],
       "tool": {
@@ -93,13 +83,13 @@
               }
             },
             {
-              "id": "MOBILE-NETWORK-002",
+              "id": "MOBILE-STORAGE-001",
               "shortDescription": {
-                "text": "Hardcoded HTTP URL"
+                "text": "Potential sensitive data in UserDefaults"
               }
             }
           ],
-          "version": "0.12.0-dev"
+          "version": "0.11.0-dev"
         }
       }
     }
