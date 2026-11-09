@@ -1,9 +1,9 @@
-name: MSE full pipeline
+name: MSE Android policy pipeline
 on:
   push:
-    branches: [mse-full-pipeline-test]
+    branches: [mse-android-policy-test]
 concurrency:
-  group: mse-full-pipeline-test
+  group: mse-android-policy-test
   cancel-in-progress: false
 jobs:
   scan:
@@ -20,11 +20,11 @@ jobs:
       - name: Check analyzer configuration
         env:
           MSE_SOURCE_REPO: ${{ vars.MSE_SOURCE_REPO }}
-          MSE_SOURCE_SHA: ${{ vars.MSE_SOURCE_SHA }}
+          MSE_ANDROID_SOURCE_SHA: ${{ vars.MSE_ANDROID_SOURCE_SHA }}
           MSE_SOURCE_DEPLOY_KEY: ${{ secrets.MSE_SOURCE_DEPLOY_KEY }}
         shell: bash
         run: |
-          [[ -n "$MSE_SOURCE_REPO" && "$MSE_SOURCE_SHA" =~ ^[a-fA-F0-9]{40}$ && -n "$MSE_SOURCE_DEPLOY_KEY" ]] || {
+          [[ -n "$MSE_SOURCE_REPO" && "$MSE_ANDROID_SOURCE_SHA" =~ ^[a-fA-F0-9]{40}$ && -n "$MSE_SOURCE_DEPLOY_KEY" ]] || {
             echo "Configure the private MSE repository, its commit SHA and read-only deploy key."
             exit 1
           }
@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: ${{ vars.MSE_SOURCE_REPO }}
-          ref: ${{ vars.MSE_SOURCE_SHA }}
+          ref: ${{ vars.MSE_ANDROID_SOURCE_SHA }}
           ssh-key: ${{ secrets.MSE_SOURCE_DEPLOY_KEY }}
           path: mse
           persist-credentials: false
@@ -43,6 +43,12 @@ jobs:
       - name: Build MSE
         working-directory: mse
         run: go build -o "$RUNNER_TEMP/mse" ./cmd/mse
+      - name: Install Kotlin analyzer
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/semgrep-venv"
+          "$RUNNER_TEMP/semgrep-venv/bin/python" -m pip install semgrep==1.183.0
+          echo "$RUNNER_TEMP/semgrep-venv/bin" >> "$GITHUB_PATH"
       - name: Scan and export
         shell: bash
         env:
@@ -53,23 +59,32 @@ jobs:
           target="$(mktemp -d "$RUNNER_TEMP/mse-fixture.XXXXXX")"
           args=(--swift-analyzer swift-syntax)
           if [[ -n "$PREVIOUS_SHA" && "$PREVIOUS_SHA" != 0000000000000000000000000000000000000000 ]]; then
-            git -C demo show "${PREVIOUS_SHA}:App.swift" > "$target/App.swift"
+            git -C demo archive "$PREVIOUS_SHA" app | tar -xf - -C "$target"
             "$cli" scan --swift-analyzer swift-syntax "$target" > "$RUNNER_TEMP/mse-before.json"
             args+=(--baseline "$RUNNER_TEMP/mse-before.json")
+            mv "$target/app" "$RUNNER_TEMP/previous-app"
           fi
-          cp demo/App.swift "$target/App.swift"
+          cp -R demo/app "$target/app"
           if [[ -f demo/suppressions.json ]]; then
             args+=(--suppressions "$GITHUB_WORKSPACE/demo/suppressions.json")
           fi
           "$cli" scan "${args[@]}" "$target" > "$RUNNER_TEMP/mse-current.json"
           "$cli" report "$RUNNER_TEMP/mse-current.json" --format sarif-github-rest --out "$RUNNER_TEMP/mse-results.sarif"
+          mkdir -p "$RUNNER_TEMP/mse-report"
+          cp "$RUNNER_TEMP/mse-current.json" "$RUNNER_TEMP/mse-report/report.json"
+          "$cli" report "$RUNNER_TEMP/mse-current.json" --out "$RUNNER_TEMP/mse-report/report.html"
+      - name: Publish synthetic report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mse-android-report
+          path: ${{ runner.temp }}/mse-report
       - name: Record baseline and suppression status
         shell: bash
         run: |
-          jq -c '{scan: .scan.status, baseline: (.baseline | if . then {comparable,new,existing,fixed: [.fixed[].rule.id]} else null end), findings: [.findings[] | {rule: .rule.id,status,suppression: .suppression.state}]}' "$RUNNER_TEMP/mse-current.json"
+          jq -c '{scan: .scan.status, baseline: (.baseline | if . then {comparable,new,existing,fixed: [.fixed[].rule.id]} else null end), findings: [.findings[] | {rule: .rule.id,status,policy: .correlation.status,suppression: .suppression.state}]}' "$RUNNER_TEMP/mse-current.json"
           jq -c '[.runs[].results[] | {ruleId,baselineState,fingerprint: .partialFingerprints.primaryLocationLineHash}]' "$RUNNER_TEMP/mse-results.sarif"
       - name: Upload by REST
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          "$RUNNER_TEMP/mse" upload-sarif --file "$RUNNER_TEMP/mse-results.sarif" --category mse-full-pipeline
+          "$RUNNER_TEMP/mse" upload-sarif --file "$RUNNER_TEMP/mse-results.sarif" --category mse-android-policy
