@@ -1,5 +1,5 @@
 android {
     defaultConfig {
-        targetSdk = 28
+        targetSdk = libs.versions.android.target.sdk.get().toInt()
     }
 }
