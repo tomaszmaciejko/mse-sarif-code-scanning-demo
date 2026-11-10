@@ -1,3 +1,3 @@
 class Endpoint {
-    String url = "https://api.example.test/v1";
+    String url = "http://api.example.test/v1";
 }
