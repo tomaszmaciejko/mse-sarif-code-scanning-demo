@@ -1,0 +1,90 @@
+name: MSE Android production gate
+on:
+  push:
+    branches: [mse-android-ci-gate-test]
+concurrency:
+  group: mse-android-ci-gate-test
+  cancel-in-progress: false
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          path: demo
+          persist-credentials: false
+      - name: Check out pinned private analyzer
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ vars.MSE_SOURCE_REPO }}
+          ref: ${{ vars.MSE_GATE_SOURCE_SHA }}
+          ssh-key: ${{ secrets.MSE_SOURCE_DEPLOY_KEY }}
+          path: mse
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: mse/go.mod
+          cache: false
+      - name: Build MSE
+        working-directory: mse
+        run: go build -o "$RUNNER_TEMP/mse" ./cmd/mse
+      - name: Install Java and Kotlin analyzer
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/semgrep-venv"
+          "$RUNNER_TEMP/semgrep-venv/bin/python" -m pip install semgrep==1.183.0
+          echo "$RUNNER_TEMP/semgrep-venv/bin" >> "$GITHUB_PATH"
+      - name: Scan baseline and evaluate policy
+        id: policy
+        shell: bash
+        env:
+          PREVIOUS_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          cli="$RUNNER_TEMP/mse"
+          target="$(mktemp -d "$RUNNER_TEMP/mse-fixture.XXXXXX")"
+          reports="$RUNNER_TEMP/mse-report"
+          mkdir -p "$reports"
+          args=(--swift-analyzer swift-syntax --include-android-tests)
+          if [[ "$PREVIOUS_SHA" == 0000000000000000000000000000000000000000 ]]; then
+            cp -R demo/policy-demo/baseline/app "$target/"
+          else
+            previous="$(mktemp -d "$RUNNER_TEMP/mse-previous.XXXXXX")"
+            git -C demo archive "$PREVIOUS_SHA" policy-demo/current | tar -xf - -C "$previous"
+            cp -R "$previous/policy-demo/current/app" "$target/"
+          fi
+          "$cli" scan "${args[@]}" "$target" > "$reports/baseline.json"
+          mv "$target/app" "$RUNNER_TEMP/mse-baseline-app"
+          cp -R demo/policy-demo/current/app "$target/"
+
+          status=0
+          "$cli" scan "${args[@]}" --baseline "$reports/baseline.json" --fail-on-new-production "$target" > "$reports/report.json" || status=$?
+          case "$status" in
+            0|2|3) ;;
+            *) exit "$status" ;;
+          esac
+          "$cli" report "$reports/report.json" --out "$reports/report.html"
+          jq -e --argjson status "$status" '
+            (.policy.status == ({"0":"pass","2":"blocked","3":"unavailable"}[$status|tostring]))
+          ' "$reports/report.json"
+          jq -c '{scan: .scan.status, baseline: {comparable: .baseline.comparable, new: .baseline.new, existing: .baseline.existing}, policy, findings: [.findings[] | {scope: .sourceScope, status, path: .location.path}]}' "$reports/report.json"
+          printf 'exit_code=%s\n' "$status" >> "$GITHUB_OUTPUT"
+      - name: Publish report before enforcing policy
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: mse-android-gate-report
+          path: ${{ runner.temp }}/mse-report
+      - name: Enforce production policy
+        shell: bash
+        env:
+          POLICY_EXIT: ${{ steps.policy.outputs.exit_code }}
+        run: |
+          case "$POLICY_EXIT" in
+            0) echo "Production policy passed." ;;
+            2) echo "::error::Production policy blocked new unsuppressed production findings."; exit 2 ;;
+            3) echo "::error::Production policy could not evaluate the scan."; exit 3 ;;
+            *) echo "::error::Missing policy decision."; exit 1 ;;
+          esac
