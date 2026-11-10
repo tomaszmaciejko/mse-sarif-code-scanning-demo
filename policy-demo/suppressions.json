@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "identityVersion": "finding-evidence-v1",
+  "entries": [
+    {
+      "key": "sha256:314bc7e55c7657770a476bbc2745254ad922ba45ba3d20846a522c3720b44a9e",
+      "reason": "Temporary acceptance for the synthetic production-gate demo.",
+      "expiresOn": "2027-11-10"
+    }
+  ]
+}
